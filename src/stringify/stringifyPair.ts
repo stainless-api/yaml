@@ -15,9 +15,9 @@ export function stringifyPair(
     allNullValues,
     doc,
     indent,
-    indentStep,
-    options: { commentString, indentSeq, simpleKeys }
+    options: { commentString, indentSeq, keepIndent, simpleKeys }
   } = ctx
+
   let keyComment = (isNode(key) && key.comment) || null
   if (simpleKeys) {
     if (keyComment) {
@@ -36,6 +36,24 @@ export function stringifyPair(
       (isScalar(key)
         ? key.type === Scalar.BLOCK_FOLDED || key.type === Scalar.BLOCK_LITERAL
         : typeof key === 'object'))
+
+  let indentStep = ctx.indentStep
+  if (
+    keepIndent &&
+    isNode(key) &&
+    isNode(value) &&
+    key.srcToken &&
+    value.srcToken &&
+    'indent' in key.srcToken &&
+    'indent' in value.srcToken
+  ) {
+    let diff = value.srcToken.indent - indent.length
+
+    // all elements other than YAMLSeq in block form must be indented to be valid YAML.
+    if (diff > 0 || (isSeq(value) && !value.flow)) {
+      indentStep = ' '.repeat(diff)
+    }
+  }
 
   ctx = Object.assign({}, ctx, {
     allNullValues: false,
